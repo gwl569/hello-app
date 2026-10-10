@@ -1,0 +1,14 @@
+{
+  "appId": "com.mec.hello",
+  "appName": "Hello",
+  "webDir": "../web",
+  "backgroundColor": "#0b1020",
+  "ios": {
+    "contentInset": "always"
+  },
+  "plugins": {
+    "LocalNotifications": {
+      "iconColor": "#488AF6"
+    }
+  }
+}

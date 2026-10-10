@@ -1,0 +1,1468 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0b1020">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Hello">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="mobile-web-app-capable" content="yes">
+<title>Hello</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<style>
+  /* ===== 改配色就调这几个变量 ===== */
+  :root {
+    --g1: #7dd3fc;   /* 主色 */
+    --g2: #a78bfa;   /* 辅色 */
+    --bg: #0b1020;   /* 背景底色 */
+    --text: #f2f6ff;
+    --dim: #9aa8c7;
+    --line: rgba(255, 255, 255, .14);
+    --ink: #10306b;        /* 待办主文字：深蓝 */
+    --ink-soft: #61759c;   /* 已完成 / 次要文字 */
+    --paper: #f7f9ff;      /* 待办卡片底色 */
+    --paper-line: rgba(16, 48, 107, .16);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { -webkit-text-size-adjust: 100%; }
+
+  body {
+    height: 100vh;
+    height: 100dvh;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", "Microsoft YaHei UI", "Microsoft YaHei", "Noto Sans SC", system-ui, sans-serif;
+    font-weight: 500;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-synthesis: none;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* 背景光晕 */
+  .orb {
+    position: fixed;
+    border-radius: 50%;
+    filter: blur(90px);
+    opacity: .5;
+    pointer-events: none;
+    animation: float 14s ease-in-out infinite;
+  }
+  .orb.a { width: 42vmax; height: 42vmax; background: var(--g1); top: -16vmax; left: -10vmax; }
+  .orb.b { width: 36vmax; height: 36vmax; background: var(--g2); bottom: -14vmax; right: -8vmax; animation-delay: -5s; }
+  .orb.c { width: 22vmax; height: 22vmax; background: var(--g1); bottom: 12vmax; left: 16vmax; opacity: .26; animation-delay: -9s; }
+
+  @keyframes float {
+    0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+    50%      { transform: translate3d(2vmax, -3vmax, 0) scale(1.08); }
+  }
+
+  /* 桌面并排、手机竖排 */
+  .wrap {
+    position: relative;
+    z-index: 1;
+    width: min(980px, 100%);
+    display: grid;
+    gap: clamp(16px, 2.4vw, 24px);
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr));
+    align-items: start;
+  }
+
+  .card {
+    padding: clamp(22px, 4.4vw, 44px);
+    border-radius: 26px;
+    background: rgba(255, 255, 255, .06);
+    border: 1px solid var(--line);
+    box-shadow: 0 30px 80px rgba(0, 0, 0, .45), inset 0 1px 0 rgba(255, 255, 255, .08);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    animation: rise .8s cubic-bezier(.2, .8, .2, 1) both;
+  }
+
+  @keyframes rise {
+    from { opacity: 0; transform: translateY(24px) scale(.98); }
+    to   { opacity: 1; transform: none; }
+  }
+
+  .card.greet { text-align: center; }
+
+  .hi {
+    font-size: clamp(14px, 2.4vw, 17px);
+    color: var(--dim);
+    letter-spacing: .18em;
+  }
+
+  h1 {
+    margin: 12px 0 10px;
+    font-size: clamp(28px, 8vw, 54px);
+    line-height: 1.14;
+    font-weight: 800;
+    background: linear-gradient(100deg, var(--g1), var(--g2));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  /* 问候语、名字、表情符号各自不拆行，换行只发生在它们之间 */
+  h1 #greetTime, h1 .who { white-space: nowrap; }
+
+  /* 西文比中文长，稍微收一点字号，问候语才不会被挤成两行 */
+  html:lang(en) h1, html:lang(es) h1 { font-size: clamp(24px, 6.2vw, 44px); }
+
+  .sub {
+    font-size: clamp(13px, 2.5vw, 16px);
+    color: var(--dim);
+    font-variant-numeric: tabular-nums;
+  }
+  .sub b { color: var(--text); font-weight: 600; }
+
+  .msg {
+    margin: 22px auto 0;
+    max-width: 30em;
+    font-size: clamp(14px, 2.7vw, 18px);
+    line-height: 1.7;
+    color: #dbe4fb;
+    min-height: 3.4em;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .msg.fade { animation: swap .45s ease; }
+  @keyframes swap {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: none; }
+  }
+
+  button {
+    font: inherit;
+    cursor: pointer;
+    border: 0;
+    touch-action: manipulation;
+  }
+
+  /* ===== 统一的按钮规格：所有交互按钮同一高度、同一圆角 ===== */
+  .actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 18px;
+  }
+
+  .icon-btn, .primary, .ghost, .add-row button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    height: 44px;
+    padding: 0 18px;
+    font: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    border: 1px solid transparent;
+    border-radius: 999px;
+    transition: background .18s ease, transform .18s ease, color .18s ease, filter .18s ease;
+  }
+  .icon-btn:active, .primary:active, .ghost:active, .add-row button:active { transform: scale(.97); }
+
+  .icon-btn {
+    color: var(--text);
+    background: rgba(255, 255, 255, .08);
+    border-color: var(--line);
+  }
+  .icon-btn:hover { background: rgba(255, 255, 255, .14); }
+  .icon-btn.on {
+    color: #0b1020;
+    background: linear-gradient(100deg, var(--g1), var(--g2));
+    border-color: transparent;
+  }
+  .icon-btn.square { width: 44px; padding: 0; font-size: 16px; }
+  .icon-btn[hidden] { display: none; }
+
+  /* ===== 声音面板（紧凑版） ===== */
+  .voice-panel {
+    margin-top: 14px;
+    padding: 12px;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, .06);
+    border: 1px solid var(--line);
+    text-align: left;
+  }
+  .voice-panel[hidden] { display: none; }
+  .voice-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+  .voice-row:last-of-type { margin-bottom: 0; }
+  .voice-row > span {
+    flex: none;
+    min-width: 2.2em;
+    font-size: 12.5px;
+    color: var(--dim);
+  }
+  .voice-row select {
+    flex: 1;
+    min-width: 0;
+    height: 36px;
+    padding: 0 10px;
+    font: inherit;
+    font-size: 12.5px;
+    color: var(--text);
+    background: rgba(255, 255, 255, .08);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    outline: none;
+  }
+  .voice-row select option { color: #0b1020; background: #fff; }
+  .voice-row input[type="range"] { flex: 1; min-width: 0; accent-color: var(--g2); }
+  .voice-row b { flex: none; width: 2.2em; text-align: right; font-size: 12.5px; color: var(--dim); }
+  .voice-row .icon-btn.square { width: 36px; height: 36px; font-size: 13px; }
+  .voice-hint {
+    margin-top: 8px;
+    font-size: 11px;
+    line-height: 1.5;
+    color: rgba(154, 168, 199, .72);
+  }
+
+  /* ===== 待办卡片里的提示音开关 ===== */
+  .todo-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .todo-head h2 { flex: 1; }
+
+  .card.todo .icon-btn.square {
+    color: var(--ink);
+    background: #fff;
+    border-color: var(--paper-line);
+  }
+  .card.todo .icon-btn.square:hover { background: #eef3ff; }
+  .card.todo .icon-btn.square.off { opacity: .5; }
+
+  .primary {
+    padding: 0 24px;
+    font-size: 15px;
+    font-weight: 700;
+    color: #0b1020;
+    background: linear-gradient(100deg, var(--g1), var(--g2));
+    box-shadow: 0 10px 26px rgba(0, 0, 0, .3);
+  }
+  .primary:hover { filter: brightness(1.06); }
+
+  .foot {
+    margin-top: 20px;
+    font-size: 12.5px;
+    line-height: 1.7;
+    color: rgba(154, 168, 199, .78);
+  }
+
+  /* ===== 待办 ===== */
+  .card.todo {
+    background: var(--paper);
+    border-color: rgba(255, 255, 255, .55);
+    color: var(--ink);
+  }
+
+  .todo h2 {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 10px;
+    font-size: clamp(17px, 3vw, 20px);
+    font-weight: 700;
+    color: var(--ink);
+  }
+  .todo h2 span {
+    font-size: 13px;
+    font-weight: 400;
+    color: var(--ink-soft);
+  }
+
+  .add-row {
+    display: flex;
+    gap: 10px;
+    margin: 16px 0 6px;
+  }
+
+  .add-row input {
+    flex: 1;
+    min-width: 0;
+    height: 44px;
+    padding: 0 18px;
+    font: inherit;
+    font-size: 16px;      /* 16px 以上手机才不会自动放大 */
+    font-weight: 700;
+    color: var(--ink);
+    background: #fff;
+    border: 1.5px solid var(--paper-line);
+    border-radius: 999px;
+    outline: none;
+    transition: border-color .18s ease, box-shadow .18s ease;
+  }
+  .add-row input::placeholder { color: #93a4c4; font-weight: 400; }
+  .add-row input:focus { border-color: var(--ink); box-shadow: 0 0 0 3px rgba(16, 48, 107, .12); }
+
+  .add-row button {
+    padding: 0 20px;
+    font-size: 14.5px;
+    font-weight: 700;
+    color: #fff;
+    background: linear-gradient(120deg, #1c4a95, var(--ink));
+  }
+
+  ul { list-style: none; margin-top: 8px; }
+
+  li {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--paper-line);
+    animation: swap .35s ease;
+  }
+  li:last-child { border-bottom: 0; }
+
+  .box {
+    flex: none;
+    width: 24px;
+    height: 24px;
+    border-radius: 8px;
+    border: 2px solid #b6c5e2;
+    background: #fff;
+    display: grid;
+    place-items: center;
+    color: #fff;
+    font-size: 14px;
+    font-weight: 900;
+    transition: background .15s ease, border-color .15s ease;
+  }
+  li.done .box { background: var(--ink); border-color: var(--ink); }
+
+  .txt {
+    flex: 1;
+    min-width: 0;
+    padding: 0;                 /* 按钮默认样式要清掉，否则会有灰底 */
+    background: transparent;
+    border: 0;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: 700;              /* 加粗 */
+    line-height: 1.5;
+    text-align: left;
+    color: var(--ink);             /* 深蓝 */
+    word-break: break-word;
+  }
+  .txt:hover { color: #0b2350; }
+  li.done .txt { color: var(--ink-soft); text-decoration: line-through; }
+
+  .del {
+    flex: none;
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    font-size: 18px;
+    color: #8fa1c0;
+    background: transparent;
+  }
+  .del:hover { color: #d64545; background: rgba(16, 48, 107, .08); }
+
+  .empty {
+    margin: 18px 0 6px;
+    font-size: 14px;
+    color: var(--ink-soft);
+  }
+
+  .todo-foot {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid var(--paper-line);
+  }
+  .count { font-size: 13.5px; font-weight: 700; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+
+  .bar {
+    flex: 1;
+    min-width: 90px;
+    height: 6px;
+    border-radius: 999px;
+    background: rgba(16, 48, 107, .14);
+    overflow: hidden;
+  }
+  .bar i {
+    display: block;
+    height: 100%;
+    width: 0;
+    border-radius: 999px;
+    background: linear-gradient(100deg, #2f5fb0, var(--ink));
+    transition: width .3s ease;
+  }
+
+  .ghost {
+    font-size: 13.5px;
+    font-weight: 700;
+    color: var(--ink);
+    background: #fff;
+    border-color: var(--paper-line);
+  }
+  .ghost:hover { background: #eef3ff; }
+
+  /* ===== 语言切换 ===== */
+  .topbar {
+    position: relative;
+    z-index: 2;
+    width: min(980px, 100%);
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: clamp(10px, 2vw, 16px);
+    animation: rise .8s .05s cubic-bezier(.2, .8, .2, 1) both;
+  }
+
+  .lang {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 14px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, .08);
+    border: 1px solid var(--line);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    cursor: pointer;
+  }
+  .lang .globe { font-size: 15px; opacity: .85; }
+  .lang select {
+    appearance: none;
+    -webkit-appearance: none;
+    min-height: 24px;
+    padding: 0 18px 0 0;
+    font: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+    background: transparent;
+    background-image: linear-gradient(45deg, transparent 50%, rgba(242, 246, 255, .7) 50%),
+                      linear-gradient(135deg, rgba(242, 246, 255, .7) 50%, transparent 50%);
+    background-position: right 6px center, right 1px center;
+    background-size: 5px 5px, 5px 5px;
+    background-repeat: no-repeat;
+    border: 0;
+    outline: none;
+    cursor: pointer;
+  }
+  .lang select option { color: #0b1020; background: #ffffff; }
+
+  @media (max-width: 420px) {
+    .wrap { gap: 14px; }
+    .card { border-radius: 22px; }
+  }
+
+  /* ===================== 定时提醒 ===================== */
+
+  /* 顶部标签栏（原本的 .topbar 改成标签 + 语言） */
+  .topbar {
+    position: static;
+    flex: none;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    margin: 0;
+    padding: calc(10px + env(safe-area-inset-top)) calc(14px + env(safe-area-inset-right)) 6px calc(14px + env(safe-area-inset-left));
+    animation: none;
+  }
+  .tabs { display: flex; gap: 6px; flex: 1; min-width: 0; }
+  .tab {
+    flex: 1 1 0;
+    min-width: 0;
+    height: 40px;
+    padding: 0 8px;
+    font: inherit;
+    font-size: 13.5px;
+    font-weight: 800;
+    letter-spacing: -.01em;
+    color: var(--dim);
+    background: rgba(255, 255, 255, .06);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    transition: background .18s ease, color .18s ease;
+  }
+  .tab.on { color: #0b1020; background: linear-gradient(100deg, var(--g1), var(--g2)); border-color: transparent; }
+  .topbar .lang { flex: none; height: 40px; padding: 0 12px; }
+
+  /* 三页左右滑动 */
+  .pager {
+    flex: 1;
+    display: flex;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scroll-snap-type: x mandatory;
+    scroll-behavior: smooth;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+  }
+  .pager::-webkit-scrollbar { display: none; }
+  .page {
+    flex: 0 0 100%;
+    width: 100%;
+    scroll-snap-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 2px calc(16px + env(safe-area-inset-left)) 16px calc(16px + env(safe-area-inset-right));
+    -webkit-overflow-scrolling: touch;
+  }
+  .page-inner { width: 100%; max-width: 980px; margin-block: auto; }
+
+  .dots {
+    flex: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 8px 0 calc(10px + env(safe-area-inset-bottom));
+  }
+  .dots i {
+    width: 6px;
+    height: 6px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, .22);
+    transition: width .2s ease, background .2s ease;
+  }
+  .dots i.on { width: 20px; background: linear-gradient(100deg, var(--g1), var(--g2)); }
+
+  /* 标题：加粗 + 左侧色条，更醒目 */
+  .page-title {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    font-size: clamp(18px, 3.4vw, 21px);
+    font-weight: 800;
+    letter-spacing: -.02em;
+  }
+  .page-title::before {
+    content: "";
+    width: 5px;
+    height: 1em;
+    border-radius: 3px;
+    background: linear-gradient(180deg, var(--g1), var(--g2));
+  }
+  .field-label {
+    margin: 16px 0 7px;
+    font-size: 12.5px;
+    font-weight: 800;
+    letter-spacing: .06em;
+    color: var(--dim);
+  }
+
+  /* 时间滚轮 */
+  .wheel {
+    position: relative;
+    display: flex;
+    gap: 4px;
+    height: 180px;
+    border-radius: 18px;
+    background: rgba(255, 255, 255, .05);
+    border: 1px solid var(--line);
+    overflow: hidden;
+    touch-action: pan-y;            /* 在滚轮上左右拖不要翻页 */
+    overscroll-behavior: contain;
+  }
+  .wheel-band {
+    position: absolute;
+    left: 6px;
+    right: 6px;
+    top: 72px;
+    height: 36px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, .09);
+    border: 1px solid rgba(255, 255, 255, .16);
+    pointer-events: none;
+    z-index: 1;
+  }
+  .col {
+    flex: 1 1 0;
+    min-width: 0;
+    height: 100%;
+    padding: 72px 0;
+    overflow-y: scroll;
+    scroll-snap-type: y mandatory;
+    touch-action: pan-y;
+    overscroll-behavior: contain;
+    scrollbar-width: none;
+    text-align: center;
+    position: relative;
+    z-index: 2;
+  }
+  .col::-webkit-scrollbar { display: none; }
+  .col.off { opacity: .3; pointer-events: none; }
+  .cell {
+    height: 36px;
+    line-height: 36px;
+    scroll-snap-align: center;
+    font-size: 17px;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    color: var(--dim);
+    transition: color .15s ease, transform .15s ease;
+    transform-origin: center;
+  }
+  .cell.on { color: var(--text); transform: scale(1.08); }
+  .wheel-units { display: flex; gap: 4px; margin-top: 6px; }
+  .wheel-units span { flex: 1 1 0; text-align: center; font-size: 11px; font-weight: 700; color: var(--dim); }
+
+  /* 快捷预设 / 重复方式 / 星期选择：统一的小胶囊 */
+  .presets, .repeat-chips, .week-chips {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    padding-bottom: 2px;
+    scrollbar-width: none;
+  }
+  .presets, .repeat-chips { touch-action: pan-x; }
+  .presets::-webkit-scrollbar, .repeat-chips::-webkit-scrollbar, .week-chips::-webkit-scrollbar { display: none; }
+  .chip {
+    flex: none;
+    height: 34px;
+    padding: 0 14px;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text);
+    background: rgba(255, 255, 255, .08);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    white-space: nowrap;
+  }
+  .chip.on { color: #0b1020; background: linear-gradient(100deg, var(--g1), var(--g2)); border-color: transparent; }
+  .week-chips { flex-wrap: wrap; overflow: visible; }
+  .week-chips .chip { width: 38px; padding: 0; justify-content: center; }
+
+  .rem-card { padding: clamp(18px, 4vw, 28px); }
+  .rem-input {
+    width: 100%;
+    height: 46px;
+    padding: 0 16px;
+    font: inherit;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text);
+    background: rgba(255, 255, 255, .08);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    outline: none;
+    transition: border-color .18s ease, box-shadow .18s ease;
+  }
+  .rem-input::placeholder { color: rgba(154, 168, 199, .62); font-weight: 500; }
+  .rem-input:focus { border-color: var(--g1); box-shadow: 0 0 0 3px rgba(125, 211, 252, .14); }
+
+  .inline-row { display: flex; align-items: center; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+  .inline-row select {
+    height: 38px;
+    padding: 0 12px;
+    font: inherit;
+    font-size: 13.5px;
+    font-weight: 700;
+    color: var(--text);
+    background: rgba(255, 255, 255, .08);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    outline: none;
+  }
+  .inline-row select option { color: #0b1020; background: #fff; }
+
+  .sw-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 11px 0;
+    border-top: 1px solid rgba(255, 255, 255, .07);
+  }
+  .sw-row .lab { flex: 1; font-size: 14px; font-weight: 700; }
+  .sw { position: relative; flex: none; width: 46px; height: 28px; }
+  .sw input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; margin: 0; cursor: pointer; z-index: 2; }
+  .sw i { position: absolute; inset: 0; border-radius: 999px; background: rgba(255, 255, 255, .16); transition: background .18s ease; }
+  .sw i::after {
+    content: "";
+    position: absolute; top: 3px; left: 3px;
+    width: 22px; height: 22px; border-radius: 50%;
+    background: #fff;
+    transition: transform .18s ease;
+  }
+  .sw input:checked + i { background: linear-gradient(100deg, var(--g1), var(--g2)); }
+  .sw input:checked + i::after { transform: translateX(18px); }
+
+  .save-row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px; }
+  .save-row .primary { flex: 1 1 auto; }
+  .ghost.danger { color: #ffb4b4; border-color: rgba(255, 140, 140, .35); background: transparent; }
+  .ghost.danger:hover { background: rgba(255, 120, 120, .12); }
+
+  .rem-list { display: grid; gap: 10px; margin-top: 14px; }
+  .rem-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px;
+    border-radius: 16px;
+    background: rgba(255, 255, 255, .06);
+    border: 1px solid var(--line);
+    text-align: left;
+  }
+  .rem-item.off { opacity: .5; }
+  .rem-item .meta { flex: 1; min-width: 0; }
+  .rem-item .t {
+    font-size: 16px;
+    font-weight: 800;
+    letter-spacing: -.02em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .rem-item .s { margin-top: 3px; font-size: 12.5px; color: var(--dim); font-variant-numeric: tabular-nums; }
+  .rem-item .s b { color: #dbe4fb; font-weight: 800; }
+  .rem-item .tagline { margin-top: 2px; font-size: 12px; color: rgba(154, 168, 199, .85); }
+  .hint { margin-top: 12px; font-size: 12.5px; line-height: 1.7; color: rgba(154, 168, 199, .9); }
+  .hint button { margin-top: 8px; }
+
+  /* 诊断面板：测试通知逐步显示卡在哪里 */
+  .diag {
+    margin-top: 12px;
+    padding: 12px;
+    border-radius: 12px;
+    background: rgba(0, 0, 0, .32);
+    border: 1px solid var(--line);
+    font: 12px/1.6 ui-monospace, Consolas, monospace;
+    color: #cfe0ff;
+    white-space: pre-wrap;
+    word-break: break-all;
+  }
+  .diag[hidden] { display: none; }
+
+  /* 全屏闹钟 */
+  .alarm {
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background: radial-gradient(120% 90% at 50% 0%, rgba(139, 92, 246, .55), rgba(11, 16, 32, .97)), #0b1020;
+  }
+  .alarm[hidden] { display: none; }
+  .alarm.ringing { animation: alarmPulse 1.5s ease-in-out infinite; }
+  @keyframes alarmPulse {
+    0%, 100% { box-shadow: inset 0 0 0 0 rgba(255, 255, 255, 0); }
+    50%      { box-shadow: inset 0 0 140px 24px rgba(255, 255, 255, .2); }
+  }
+  .alarm-inner { width: min(560px, 100%); text-align: center; }
+  .alarm-label { font-size: 15px; font-weight: 800; letter-spacing: .1em; color: var(--dim); }
+  .alarm-time {
+    margin-top: 6px;
+    font-size: clamp(54px, 17vw, 104px);
+    font-weight: 800;
+    letter-spacing: -.04em;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+    background: linear-gradient(100deg, var(--g1), var(--g2));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .alarm-title { margin-top: 20px; font-size: clamp(24px, 7vw, 38px); font-weight: 800; letter-spacing: -.02em; }
+  .alarm-note { margin-top: 8px; font-size: 15px; color: var(--dim); }
+  .alarm-actions { margin-top: 30px; display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+  .alarm-actions .primary, .alarm-actions .ghost { height: 56px; padding: 0 30px; font-size: 17px; }
+  .alarm-actions .ghost { color: var(--text); border-color: rgba(255, 255, 255, .3); background: rgba(255, 255, 255, .08); }
+  .alarm-actions .ghost:hover { background: rgba(255, 255, 255, .16); }
+  .alarm-hint { margin-top: 18px; font-size: 12.5px; color: rgba(154, 168, 199, .8); }
+
+  .toast {
+    position: fixed;
+    left: 50%;
+    bottom: calc(28px + env(safe-area-inset-bottom));
+    transform: translateX(-50%) translateY(10px);
+    z-index: 70;
+    padding: 12px 20px;
+    border-radius: 999px;
+    background: rgba(20, 26, 44, .95);
+    border: 1px solid var(--line);
+    color: var(--text);
+    font-size: 14px;
+    font-weight: 700;
+    box-shadow: 0 14px 40px rgba(0, 0, 0, .5);
+    opacity: 0;
+    transition: opacity .2s ease, transform .2s ease;
+  }
+  .toast.on { opacity: 1; transform: translateX(-50%) translateY(0); }
+  .toast[hidden] { display: none; }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+  }
+</style>
+</head>
+<body>
+  <div class="orb a"></div>
+  <div class="orb b"></div>
+  <div class="orb c"></div>
+
+  <div class="topbar">
+    <div class="tabs" id="tabs">
+      <button class="tab on" type="button" data-page="0">今日</button>
+      <button class="tab" type="button" data-page="1">提醒</button>
+      <button class="tab" type="button" data-page="2">我的提醒</button>
+    </div>
+    <label class="lang">
+      <span class="globe" aria-hidden="true">🌐</span>
+      <select id="langSelect" aria-label="语言 / Language"></select>
+    </label>
+  </div>
+
+  <div class="pager" id="pager">
+  <section class="page" id="page0">
+  <div class="page-inner">
+  <div class="wrap">
+    <main class="card greet">
+      <p class="hi" data-i18n="hi">你好呀 👋</p>
+      <h1 id="greeting"><span id="greetTime"></span><span class="who"><span id="greetName"></span> <span id="greetEmoji"></span></span></h1>
+      <p class="sub"><span data-i18n="now">现在是</span> <b id="clock">--:--:--</b> · <span id="date">----</span></p>
+      <p class="msg" id="message"></p>
+      <div class="actions">
+        <button class="icon-btn" id="speakBtn" type="button" aria-pressed="false" hidden>
+          <span id="speakIco" aria-hidden="true">🔊</span><span id="speakLabel">朗读</span>
+        </button>
+        <button class="icon-btn square" id="voiceBtn" type="button" hidden aria-label="声音">⚙️</button>
+        <button class="primary" id="again" type="button" data-i18n="again">再听一句</button>
+      </div>
+
+      <div class="voice-panel" id="voicePanel" hidden>
+        <div class="voice-row">
+          <span data-i18n="voice">声音</span>
+          <select id="voiceSelect"></select>
+        </div>
+        <div class="voice-row">
+          <span data-i18n="speed">语速</span>
+          <input id="rateRange" type="range" min="0.7" max="1.25" step="0.05" value="0.9">
+          <b id="rateValue">0.9</b>
+          <button class="icon-btn square" id="voicePreview" type="button" aria-label="试听">▶</button>
+        </div>
+        <p class="voice-hint" data-i18n="voiceHint">电脑用 Edge、手机用 Safari，声音更自然</p>
+      </div>
+      <p class="foot" data-i18n="foot">在手机上打开后，可以「添加到主屏幕」，用起来就像个小 App。</p>
+    </main>
+
+    <section class="card todo">
+      <div class="todo-head">
+        <h2><span data-i18n="todoTitle">今日待办</span> <span id="todoDate"></span></h2>
+        <button class="icon-btn sound" id="soundBtn" type="button" aria-pressed="true" title="完成提示音">
+          <span id="soundIco" aria-hidden="true">🔔</span>
+        </button>
+      </div>
+      <form class="add-row" id="addForm">
+        <input id="todoInput" type="text" maxlength="60" autocomplete="off" enterkeyhint="done">
+        <button type="submit" data-i18n="add">添加</button>
+      </form>
+      <ul id="todoList"></ul>
+      <p class="empty" id="emptyTip" data-i18n="empty">还没有待办，先写一条试试 👆</p>
+      <div class="todo-foot">
+        <span class="count" id="count">0 / 0</span>
+        <span class="bar"><i id="bar"></i></span>
+        <button class="ghost" id="clearDone" type="button" data-i18n="clearDone">清除已完成</button>
+      </div>
+    </section>
+  </div>
+  </div>
+  </section>
+
+  <section class="page" id="page1">
+    <div class="page-inner">
+      <div class="card rem-card">
+        <h2 class="page-title" id="remFormTitle">新建提醒</h2>
+
+        <p class="field-label" data-remind="timeLabel">提醒时间</p>
+        <div class="presets" id="presets"></div>
+        <div class="wheel" id="wheel">
+          <div class="wheel-band"></div>
+          <div class="col" data-unit="0"></div>
+          <div class="col" data-unit="1"></div>
+          <div class="col" data-unit="2"></div>
+          <div class="col" data-unit="3"></div>
+          <div class="col" data-unit="4"></div>
+          <div class="col" data-unit="5"></div>
+        </div>
+        <div class="wheel-units" id="wheelUnits"></div>
+
+        <p class="field-label" data-remind="titleLabel">标题</p>
+        <input id="remTitleInput" class="rem-input" type="text" maxlength="40">
+        <div style="height:8px"></div>
+        <input id="remNoteInput" class="rem-input" type="text" maxlength="80">
+
+        <p class="field-label" data-remind="repeatLabel">重复</p>
+        <div class="repeat-chips" id="repeatChips"></div>
+        <div id="repeatExtra"></div>
+
+        <div id="switches" style="margin-top:14px"></div>
+
+        <div class="save-row">
+          <button class="primary" id="saveRem" type="button">保存提醒</button>
+          <button class="ghost" id="resetRem" type="button">再建一条</button>
+          <button class="ghost danger" id="deleteRem" type="button" hidden>删除这条提醒</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="page" id="page2">
+    <div class="page-inner">
+      <div class="card rem-card">
+        <div class="list-head">
+          <h2 class="page-title" id="listTitleH">我的提醒</h2>
+          <button class="ghost" id="testPush" type="button">发一条测试通知</button>
+        </div>
+        <div class="rem-list" id="remList"></div>
+        <p class="empty" id="remEmpty"></p>
+        <p class="hint" id="notifHint" hidden></p>
+        <pre class="diag" id="diag" hidden></pre>
+      </div>
+    </div>
+  </section>
+  </div>
+
+  <div class="dots" id="dots"><i class="on"></i><i></i><i></i></div>
+
+  <div class="alarm" id="alarm" hidden>
+    <div class="alarm-inner">
+      <p class="alarm-label" id="alarmLabel">时间到</p>
+      <div class="alarm-time" id="alarmTime">00:00:00</div>
+      <h2 class="alarm-title" id="alarmTitleH">—</h2>
+      <p class="alarm-note" id="alarmNote"></p>
+      <div class="alarm-actions">
+        <button class="primary" id="alarmSnooze" type="button">贪睡</button>
+        <button class="ghost" id="alarmStop" type="button">停止</button>
+      </div>
+      <p class="alarm-hint" id="alarmHint"></p>
+    </div>
+  </div>
+
+  <div class="toast" id="toast" hidden></div>
+
+<script src="i18n.js"></script>
+<script src="remind-i18n.js"></script>
+<script>
+  /* ===== 语言：所有文案都在 i18n.js 里，想加语言改那个文件就行 ===== */
+  const I18N = window.HELLO_I18N || {};
+  const LANGS = Object.keys(I18N);
+  const DEFAULT_LANG = "zh-CN";
+  const LANG_KEY = "hello:lang";
+
+  // 每个时段的配色和表情符号（各语言共用，只翻译文字）
+  const SLOTS = [
+    { from: 5,  to: 9,  emoji: "🌅", c1: "#fbbf24", c2: "#f97316" },
+    { from: 9,  to: 12, emoji: "☀️", c1: "#7dd3fc", c2: "#38bdf8" },
+    { from: 12, to: 14, emoji: "🍜", c1: "#fca5a5", c2: "#f59e0b" },
+    { from: 14, to: 18, emoji: "🌤️", c1: "#6ee7b7", c2: "#22d3ee" },
+    { from: 18, to: 22, emoji: "🌆", c1: "#c4b5fd", c2: "#8b5cf6" },
+    { from: 22, to: 29, emoji: "🌙", c1: "#818cf8", c2: "#4338ca" }
+  ];
+
+  const pad = n => String(n).padStart(2, "0");
+  const $ = id => document.getElementById(id);
+  const root = document.documentElement;
+
+  let lang = DEFAULT_LANG;
+  let msgIndex = 0;
+  let dateFmt = null;
+  let autoRead = false;      // 朗读开关（会记住选择）
+  let soundOn = true;        // 完成待办的提示音开关
+  let voices = [];
+
+  const L = () => I18N[lang] || I18N[DEFAULT_LANG] || {};
+  const slotIndexFor = hour => {
+    const i = SLOTS.findIndex(s => hour >= s.from && hour < s.to);
+    return i === -1 ? SLOTS.length - 1 : i;
+  };
+
+  /* ---------- 问候 + 时钟 ---------- */
+  function paintGreeting(hour) {
+    const dict = L();
+    const i = slotIndexFor(hour);
+    const greet = (dict.slots && dict.slots[i]) || "";
+    const name = dict.name || "";
+    const join = dict.join || "";
+    $("greetTime").textContent = greet;
+    $("greetName").textContent = name ? join + name : "";
+    $("greetEmoji").textContent = SLOTS[i].emoji;
+    document.title = greet + (name ? join + name : "") + " · Hello";
+    root.style.setProperty("--g1", SLOTS[i].c1);
+    root.style.setProperty("--g2", SLOTS[i].c2);
+  }
+
+  function dateText(now) {
+    if (!dateFmt) {
+      const dict = L();
+      try {
+        dateFmt = new Intl.DateTimeFormat(dict.dateLocale || dict.htmlLang || "en", {
+          year: "numeric", month: "long", day: "numeric", weekday: "long"
+        });
+      } catch (e) { dateFmt = null; }
+    }
+    return dateFmt
+      ? dateFmt.format(now)
+      : now.getFullYear() + "-" + pad(now.getMonth() + 1) + "-" + pad(now.getDate());
+  }
+
+  function tick() {
+    const now = new Date();
+    $("clock").textContent = pad(now.getHours()) + ":" + pad(now.getMinutes()) + ":" + pad(now.getSeconds());
+    $("date").textContent = dateText(now);
+    paintGreeting(now.getHours());
+  }
+
+  function showMessage(index) {
+    const list = L().messages || [];
+    if (!list.length) return;
+    msgIndex = ((index % list.length) + list.length) % list.length;
+    const el = $("message");
+    el.textContent = list[msgIndex];
+    el.classList.remove("fade");
+    void el.offsetWidth;               // 让动画重新播放
+    el.classList.add("fade");
+    if (autoRead) speak(el.textContent);
+  }
+
+  function sayAnother() {
+    const len = (L().messages || []).length;
+    if (len > 1) showMessage(msgIndex + 1 + Math.floor(Math.random() * (len - 1)));
+    else showMessage(msgIndex);
+  }
+
+  /* ---------- 朗读中间那句（浏览器原生语音合成） ---------- */
+  const canSpeak = typeof window.speechSynthesis !== "undefined" &&
+                   typeof window.SpeechSynthesisUtterance !== "undefined";
+
+  function loadVoices() {
+    if (!canSpeak) return;
+    voices = window.speechSynthesis.getVoices() || [];
+    if ($("voicePanel") && !$("voicePanel").hidden) paintVoicePanel();
+  }
+  if (canSpeak) {
+    loadVoices();
+    window.speechSynthesis.onvoiceschanged = loadVoices;
+  }
+
+  /* 给嗓音打分：优先「神经网络/自然音」+「女声」，避开男声和老式机械音 */
+  const FEMALE_HINTS = [
+    "xiaoxiao", "xiaoyi", "xiaomo", "xiaorui", "xiaoshuang", "xiaohan", "huihui", "yaoyao",
+    "晓晓", "晓伊", "晓墨", "晓睿", "晓双", "晓涵", "慧慧", "曉曉", "曉伊",
+    "tingting", "sinji", "female", "woman", "aria", "jenny", "michelle", "ana", "emma",
+    "libby", "sonia", "zira", "samantha", "karen", "moira", "tessa", "fiona", "nanami",
+    "七海", "aoi", "ayumi", "haruka", "sunhi", "선히", "yuna", "elvira", "helena", "laura", "lucia",
+    "marisol", "paulina", "carmen", "sara"
+  ];
+  const MALE_HINTS = [
+    "yunxi", "yunjian", "yunyang", "yunfeng", "kangkang", "david", "mark", "guy", "steffan",
+    "云希", "云健", "云扬", "云枫", "雲希", "雲揚",
+    "george", "james", "ryan", "thomas", "william", "ichiro", "keita", "daichi", "injoon",
+    "gook", "bong", "인준", "pablo", "jorge", "diego", "carlos", "enrique", "raul", "male"
+  ];
+  const NATURAL_HINTS = ["online (natural)", "natural", "neural", "premium", "enhanced", "siri", "eloquence"];
+
+  function scoreVoice(v, locale) {
+    const name = (v.name || "").toLowerCase();
+    const vlang = (v.lang || "").toLowerCase().replace("_", "-");
+    const want = (locale || "").toLowerCase();
+    const base = want.split("-")[0];
+    if (!base || vlang.indexOf(base) !== 0) return -1000;
+    let score = vlang === want ? 40 : 20;
+    if (NATURAL_HINTS.some(k => name.indexOf(k) > -1)) score += 120;
+    if (FEMALE_HINTS.some(k => name.indexOf(k) > -1)) score += 60;
+    if (MALE_HINTS.some(k => name.indexOf(k) > -1)) score -= 200;
+    if (name.indexOf("desktop") > -1) score -= 40;   // 通常是老式 SAPI 机械音
+    return score;
+  }
+
+  function voicesForLocale(locale) {
+    return voices
+      .map(v => ({ v, s: scoreVoice(v, locale) }))
+      .filter(x => x.s > -1000)
+      .sort((a, b) => b.s - a.s)
+      .map(x => x.v);
+  }
+
+  let chosenVoiceName = "";    // 用户手选的声音（空 = 自动挑最好的）
+  let rate = 0.9;              // 语速慢一点更温柔
+
+  // 朗读用的完整区域代码（en → en-US、ja → ja-JP …），这样能精确匹配到同一地区的嗓音
+  const speechLocale = () => L().dateLocale || L().htmlLang || lang || "en-US";
+
+  function stopSpeaking() {
+    if (canSpeak) window.speechSynthesis.cancel();
+  }
+
+  function currentVoice(locale) {
+    const list = voicesForLocale(locale);
+    if (chosenVoiceName) {
+      const hit = list.find(v => v.name === chosenVoiceName);
+      if (hit) return hit;
+    }
+    return list[0] || null;
+  }
+
+  function speak(text) {
+    if (!canSpeak || !text) return;
+    const locale = speechLocale();
+    const synth = window.speechSynthesis;
+    synth.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = locale;
+    const v = currentVoice(locale);
+    if (v) { u.voice = v; u.lang = v.lang || locale; }
+    u.rate = rate;
+    u.pitch = 1;
+    u.volume = 1;
+    synth.speak(u);
+  }
+
+  function paintVoicePanel() {
+    const sel = $("voiceSelect");
+    if (!sel) return;
+    const locale = speechLocale();
+    const list = voicesForLocale(locale);
+
+    sel.textContent = "";
+    const auto = document.createElement("option");
+    auto.value = "";
+    auto.textContent = (L().voiceAuto || "自动（推荐）") + (list[0] ? "：" + list[0].name : "");
+    sel.append(auto);
+
+    list.slice(0, 40).forEach(v => {
+      const o = document.createElement("option");
+      o.value = v.name;
+      o.textContent = v.name + " · " + v.lang;
+      sel.append(o);
+    });
+    sel.value = list.some(v => v.name === chosenVoiceName) ? chosenVoiceName : "";
+  }
+
+  function paintSpeakBtn() {
+    const btn = $("speakBtn");
+    if (!btn) return;
+    btn.hidden = !canSpeak;
+    const gear = $("voiceBtn");
+    if (gear) gear.hidden = !canSpeak;
+    btn.classList.toggle("on", autoRead);
+    btn.setAttribute("aria-pressed", autoRead ? "true" : "false");
+    $("speakIco").textContent = autoRead ? "🔈" : "🔊";
+    $("speakLabel").textContent = autoRead
+      ? (L().readStop || "停止朗读")
+      : (L().read || "朗读这句");
+  }
+
+  function setAutoRead(on, speakNow) {
+    autoRead = !!on;
+    try { store.setItem("hello:read", autoRead ? "1" : "0"); } catch (e) {}
+    if (!autoRead) stopSpeaking();
+    paintSpeakBtn();
+    if (autoRead && speakNow) speak($("message").textContent);
+  }
+
+  /* ---------- 完成待办的「叮咚」提示音（Web Audio 现场合成，不用音频文件） ---------- */
+  let audioCtx = null;
+
+  function audio() {
+    const Ctor = window.AudioContext || window.webkitAudioContext;
+    if (!Ctor) return null;
+    if (!audioCtx) audioCtx = new Ctor();
+    if (audioCtx.state === "suspended" && audioCtx.resume) audioCtx.resume();
+    return audioCtx;
+  }
+
+  function ring(ac, freq, at, dur, level) {
+    const osc = ac.createOscillator();
+    const gain = ac.createGain();
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(freq, at);
+    gain.gain.setValueAtTime(0.0001, at);
+    gain.gain.exponentialRampToValueAtTime(level, at + 0.012);
+    gain.gain.exponentialRampToValueAtTime(0.0001, at + dur);
+    osc.connect(gain).connect(ac.destination);
+    osc.start(at);
+    osc.stop(at + dur + 0.05);
+
+    const osc2 = ac.createOscillator();        // 泛音，听起来更像“叮”
+    const gain2 = ac.createGain();
+    osc2.type = "sine";
+    osc2.frequency.setValueAtTime(freq * 2.76, at);
+    gain2.gain.setValueAtTime(0.0001, at);
+    gain2.gain.exponentialRampToValueAtTime(level * 0.28, at + 0.008);
+    gain2.gain.exponentialRampToValueAtTime(0.0001, at + dur * 0.45);
+    osc2.connect(gain2).connect(ac.destination);
+    osc2.start(at);
+    osc2.stop(at + dur * 0.45 + 0.05);
+  }
+
+  function chime(allDone) {
+    if (!soundOn) return;
+    const ac = audio();
+    if (!ac) return;
+    const t0 = ac.currentTime + 0.03;
+    ring(ac, 1046.5, t0, 0.70, 0.22);              // 叮（C6）
+    ring(ac, 784.0, t0 + 0.16, 0.90, 0.20);        // 咚（G5）
+    if (allDone) ring(ac, 1318.5, t0 + 0.34, 1.0, 0.15);   // 全部做完了，再补一记高音
+  }
+
+  function paintSoundBtn() {
+    const btn = $("soundBtn");
+    if (!btn) return;
+    btn.classList.toggle("off", !soundOn);
+    btn.setAttribute("aria-pressed", soundOn ? "true" : "false");
+    btn.title = soundOn ? (L().soundOn || "完成提示音：开") : (L().soundOff || "完成提示音：关");
+    $("soundIco").textContent = soundOn ? "🔔" : "🔕";
+  }
+
+  /* ---------- 今日待办（按天保存，存在本机浏览器里） ---------- */
+  const store = (() => {
+    try {
+      localStorage.setItem("__probe", "1");
+      localStorage.removeItem("__probe");
+      return localStorage;
+    } catch (e) {                       // 某些浏览器禁止本地存储时退回内存
+      const mem = {};
+      return {
+        getItem: k => (k in mem ? mem[k] : null),
+        setItem: (k, v) => { mem[k] = String(v); },
+        removeItem: k => { delete mem[k]; }
+      };
+    }
+  })();
+
+  const today = new Date();
+  const dayKey = "todos:" + today.getFullYear() + "-" + pad(today.getMonth() + 1) + "-" + pad(today.getDate());
+
+  let todos = [];
+  try { todos = JSON.parse(store.getItem(dayKey) || "[]") || []; } catch (e) { todos = []; }
+  if (!Array.isArray(todos)) todos = [];
+
+  const save = () => store.setItem(dayKey, JSON.stringify(todos));
+
+  function renderTodos() {
+    const list = $("todoList");
+    list.textContent = "";
+
+    todos.forEach(t => {
+      const li = document.createElement("li");
+      if (t.done) li.className = "done";
+
+      const box = document.createElement("button");
+      box.type = "button";
+      box.className = "box";
+      box.setAttribute("aria-label", t.done ? L().markUndone : L().markDone);
+      box.textContent = t.done ? "✓" : "";
+      const toggle = () => {
+        const wasDone = t.done;
+        t.done = !t.done;
+        save();
+        renderTodos();
+        if (!wasDone && t.done) chime(todos.length > 0 && todos.every(x => x.done));
+      };
+      box.addEventListener("click", toggle);
+
+      const txt = document.createElement("button");
+      txt.type = "button";
+      txt.className = "txt";
+      txt.textContent = t.text;         // 用 textContent，输入什么就显示什么
+      txt.addEventListener("click", toggle);
+
+      const del = document.createElement("button");
+      del.type = "button";
+      del.className = "del";
+      del.setAttribute("aria-label", L().del);
+      del.textContent = "×";
+      del.addEventListener("click", () => {
+        todos = todos.filter(x => x !== t);
+        save();
+        renderTodos();
+      });
+
+      li.append(box, txt, del);
+      list.append(li);
+    });
+
+    const done = todos.filter(t => t.done).length;
+    $("count").textContent = done + " / " + todos.length;
+    $("bar").style.width = (todos.length ? (done / todos.length) * 100 : 0) + "%";
+    $("emptyTip").style.display = todos.length ? "none" : "block";
+  }
+
+  function addTodo(text) {
+    const value = text.trim();
+    if (!value) return;
+    todos.push({ id: String(Date.now()) + Math.random().toString(36).slice(2, 6), text: value, done: false });
+    save();
+    renderTodos();
+  }
+
+  $("addForm").addEventListener("submit", e => {
+    e.preventDefault();
+    addTodo($("todoInput").value);
+    $("todoInput").value = "";
+    $("todoInput").focus();
+  });
+
+  $("clearDone").addEventListener("click", () => {
+    todos = todos.filter(t => !t.done);
+    save();
+    renderTodos();
+  });
+
+  /* ---------- 语言切换 ---------- */
+  function pickLang() {
+    let saved = null;
+    try { saved = store.getItem(LANG_KEY); } catch (e) {}
+    if (saved && I18N[saved]) return saved;
+
+    const nav = (navigator.languages && navigator.languages[0]) || navigator.language || "";
+    if (I18N[nav]) return nav;
+    const lower = nav.toLowerCase();
+    if (lower.indexOf("zh") === 0) {
+      return (lower.indexOf("tw") > -1 || lower.indexOf("hk") > -1 || lower.indexOf("hant") > -1)
+        ? "zh-TW" : "zh-CN";
+    }
+    const base = lower.split("-")[0];
+    const hit = LANGS.find(code => code.toLowerCase().split("-")[0] === base);
+    return hit || DEFAULT_LANG;
+  }
+
+  function applyLanguage(code, remember) {
+    lang = I18N[code] ? code : DEFAULT_LANG;
+    dateFmt = null;
+    const dict = L();
+
+    root.lang = dict.htmlLang || lang;
+    document.querySelectorAll("[data-i18n]").forEach(el => {
+      const value = dict[el.getAttribute("data-i18n")];
+      if (value) el.textContent = value;
+    });
+    $("todoInput").placeholder = dict.placeholder || "";
+    $("langSelect").value = lang;
+    const gear = $("voiceBtn");
+    if (gear) { gear.title = dict.voice || "声音"; gear.setAttribute("aria-label", gear.title); }
+    const previewBtn = $("voicePreview");
+    if (previewBtn) {
+      previewBtn.title = dict.preview || "试听";
+      previewBtn.setAttribute("aria-label", previewBtn.title);
+    }
+
+    const now = new Date();
+    tick();
+    $("todoDate").textContent = "· " + dateText(now);
+    renderTodos();
+    if (!remember) msgIndex = Math.floor(Math.random() * 1000);   // 首次随机挑一句
+    showMessage(msgIndex);
+    paintSpeakBtn();
+    paintSoundBtn();
+    paintVoicePanel();
+
+    if (remember) { try { store.setItem(LANG_KEY, lang); } catch (e) {} }
+    if (window.HelloReminders) window.HelloReminders.refresh();
+  }
+
+  /* ---------- 启动 ---------- */
+  (function buildLangSelect() {
+    const sel = $("langSelect");
+    LANGS.forEach(code => {
+      const opt = document.createElement("option");
+      opt.value = code;
+      opt.textContent = I18N[code].label || code;
+      sel.append(opt);
+    });
+    sel.addEventListener("change", () => applyLanguage(sel.value, true));
+  })();
+
+  $("again").addEventListener("click", sayAnother);
+
+  $("speakBtn").addEventListener("click", () => setAutoRead(!autoRead, true));
+
+  $("voiceBtn").addEventListener("click", () => {
+    const panel = $("voicePanel");
+    panel.hidden = !panel.hidden;
+    $("voiceBtn").classList.toggle("on", !panel.hidden);
+    if (!panel.hidden) paintVoicePanel();
+  });
+
+  $("voiceSelect").addEventListener("change", e => {
+    chosenVoiceName = e.target.value;
+    try { store.setItem("hello:voice", chosenVoiceName); } catch (err) {}
+    speak($("message").textContent);       // 选完立刻试听
+  });
+
+  $("rateRange").addEventListener("input", e => {
+    rate = Number(e.target.value);
+    $("rateValue").textContent = String(Math.round(rate * 100) / 100);
+    try { store.setItem("hello:rate", String(rate)); } catch (err) {}
+  });
+
+  $("rateRange").addEventListener("change", () => speak($("message").textContent));
+
+  $("voicePreview").addEventListener("click", () => speak($("message").textContent));
+
+  $("soundBtn").addEventListener("click", () => {
+    soundOn = !soundOn;
+    try { store.setItem("hello:sound", soundOn ? "1" : "0"); } catch (e) {}
+    paintSoundBtn();
+    if (soundOn) chime(false);          // 打开时先响一声，方便试听
+  });
+
+  try {
+    autoRead = store.getItem("hello:read") === "1";
+    soundOn = store.getItem("hello:sound") !== "0";
+    chosenVoiceName = store.getItem("hello:voice") || "";
+    const savedRate = parseFloat(store.getItem("hello:rate"));
+    if (savedRate >= 0.7 && savedRate <= 1.25) rate = savedRate;
+  } catch (e) {}
+  $("rateRange").value = rate;
+  $("rateValue").textContent = String(Math.round(rate * 100) / 100);
+
+  applyLanguage(pickLang(), false);
+  setInterval(tick, 1000);
+
+  // 给原生 App 里的 native.js 复用同一套文案
+  window.HELLO = {
+    lang: () => lang,
+    strings: () => L(),
+    greetingForHour: hour => (L().slots || [])[slotIndexFor(hour)] || ""
+  };
+</script>
+<script>
+  // 离线可用：通过 http/https 打开时注册 Service Worker（双击本地文件时不注册）
+  if ("serviceWorker" in navigator && location.protocol.indexOf("http") === 0) {
+    window.addEventListener("load", function () {
+      navigator.serviceWorker.register("./sw.js").catch(function () {});
+    });
+  }
+</script>
+<script src="native.js"></script>
+<script src="reminders.js"></script>
+<script src="native-reminders.js"></script>
+</body>
+</html>
